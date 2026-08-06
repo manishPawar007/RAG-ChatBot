@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResearchMind AI | Intelligent RAG Research Assistant</title>
+  <meta name="description" content="ResearchMind AI - Smart Research Assistant & PDF Document Q&A powered by RAG and AI">
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="spinner-box">
+      <div class="pulse-spinner"></div>
+      <span id="loadingText" class="loading-text">Connecting to ResearchMind AI...</span>
+    </div>
+  </div>
+
+  <div class="app-layout" id="app">
+
+    <!-- =====================================================
+         Sidebar Navigation & History
+    ====================================================== -->
+    <aside class="sidebar" id="sidebar">
+      <!-- Sidebar Header / Branding -->
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <div class="brand-icon">
+            <i class="fa-solid fa-microscope"></i>
+          </div>
+          <div class="brand-text">
+            <h2>ResearchMind <span class="badge-ai">AI</span></h2>
+            <span>RAG Document Intelligence</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Button: New Chat -->
+      <div class="sidebar-action">
+        <button id="newChatButton" class="btn-new-chat">
+          <i class="fa-solid fa-plus"></i>
+          <span>Start New Chat</span>
+        </button>
+      </div>
+
+      <!-- Main Navigation Menu -->
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-panel="chat" id="navChatBtn">
+          <i class="fa-solid fa-comments"></i>
+          <span>AI Chat Studio</span>
+        </button>
+
+        <button class="nav-item" data-panel="documents" id="navDocsBtn">
+          <i class="fa-solid fa-book-open-reader"></i>
+          <span>Research Library</span>
+          <span class="nav-badge" id="sidebarDocCount">0</span>
+        </button>
+
+        <button class="nav-item" data-panel="analytics" id="navAnalyticsBtn">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Insights & Stats</span>
+        </button>
+
+        <button class="nav-item" data-panel="settings" id="settingsButton">
+          <i class="fa-solid fa-sliders"></i>
+          <span>Preferences</span>
+        </button>
+      </nav>
+
+      <!-- Chat History Section -->
+      <div class="chat-history-section">
+        <div class="history-label">
+          <span>Recent Conversations</span>
+          <button id="clearHistoryBtn" class="btn-text-sm" title="Clear non-active chats">Clear</button>
+        </div>
+        <div class="history-list" id="chatHistoryList">
+          <div class="chat-history-empty">No previous chats yet</div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer / User Profile & Backend Ping -->
+      <div class="sidebar-footer">
+        <div class="backend-status-card offline mb-2" id="backendStatusBox">
+          <div class="status-indicator">
+            <span class="status-dot"></span>
+            <span class="status-ping"></span>
+          </div>
+          <div class="status-info">
+            <div class="status-title">Backend API</div>
+            <div class="status-sub" id="backendStatus">Connecting...</div>
+          </div>
+        </div>
+
+        <!-- ChatGPT-Style User Profile Pill & Dropdown -->
+        <div class="user-profile-wrapper" id="userProfileWrapper">
+          <button class="user-profile-btn" id="userProfileBtn">
+            <div class="user-avatar-box" id="userAvatarBox">
+              <span id="userInitials">GU</span>
+            </div>
+            <div class="user-meta">
+              <span class="user-name" id="userName">Guest Researcher</span>
+              <span class="user-plan" id="userPlan">Free Account</span>
+            </div>
+            <i class="fa-solid fa-ellipsis-vertical btn-more"></i>
+          </button>
+
+          <!-- User Menu Popup -->
+          <div class="user-menu-dropdown hidden" id="userMenuDropdown">
+            <div class="user-profile-header-card">
+              <div class="user-avatar-large">
+                <span id="menuUserInitials">GU</span>
+              </div>
+              <div class="user-header-info">
+                <strong id="menuUserName">Guest Researcher</strong>
+                <small id="menuUserEmail">guest@researchmind.ai</small>
+                <div class="user-badge-tag">
+                  <i class="fa-solid fa-shield-halved text-primary"></i>
+                  <span id="menuUserPlan">Free Account</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="user-stats-grid">
+              <div class="user-stat-box">
+                <span class="stat-num" id="userStatChats">0</span>
+                <span class="stat-lbl">Chats</span>
+              </div>
+              <div class="user-stat-box">
+                <span class="stat-num" id="userStatDocs">0</span>
+                <span class="stat-lbl">Papers</span>
+              </div>
+              <div class="user-stat-box">
+                <span class="stat-num text-success">Active</span>
+                <span class="stat-lbl">Status</span>
+              </div>
+            </div>
+
+            <div class="menu-divider"></div>
+
+            <button id="btnOpenLoginModal" class="user-menu-item">
+              <i class="fa-solid fa-right-to-bracket text-primary"></i>
+              <span>Switch / Login Account</span>
+            </button>
+            <button id="btnLogout" class="user-menu-item hidden">
+              <i class="fa-solid fa-right-from-bracket text-danger"></i>
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <!-- =====================================================
+         Main Workspace
+    ====================================================== -->
+    <main class="main-workspace" id="mainContent">
+
+      <!-- Top Header Bar with Working Global Search & Export Chat -->
+      <header class="top-bar">
+        <div class="bar-left">
+          <button class="icon-btn mobile-only" id="sidebarToggle" title="Toggle Menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+
+          <div class="current-view-info">
+            <h1 id="viewTitle">AI Chat Studio</h1>
+            <span id="viewSubTitle" class="subtitle">Ask questions across your research documents</span>
+          </div>
+        </div>
+
+        <!-- Global Header Working Search Bar -->
+        <div class="header-search-container">
+          <div class="header-search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="headerSearchInput" placeholder="Search chats, documents, topics..." autocomplete="off">
+            <button id="clearHeaderSearch" class="btn-clear-search hidden" title="Clear search">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <!-- Real-Time Search Results Dropdown Overlay -->
+          <div id="headerSearchResults" class="search-results-dropdown hidden"></div>
+        </div>
+
+        <!-- Active Focus Document Pill Banner -->
+        <div class="active-doc-pill hidden" id="activeDocBanner">
+          <i class="fa-solid fa-file-pdf"></i>
+          <span class="pill-label">Target PDF:</span>
+          <span class="pill-name" id="activeDocName">Document.pdf</span>
+          <button id="clearActiveDoc" class="btn-clear-doc" title="Reset filter to query all documents">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="bar-actions">
+          <button class="icon-btn" id="exportChatBtn" title="Export Conversation (PDF / Text / MD)">
+            <i class="fa-solid fa-download"></i>
+          </button>
+
+          <button class="icon-btn" id="documentsToggle" title="Toggle Research Library">
+            <i class="fa-solid fa-folder-open"></i>
+          </button>
+
+          <button class="icon-btn" id="themeToggle" title="Switch Theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- ===================================================
+           VIEW 1: AI Chat Workspace
+      ==================================================== -->
+      <section class="view-panel active" id="view-chat">
+        <div class="chat-viewport">
+          <div class="messages-container" id="chatMessages">
+
+            <!-- Welcome Screen (Shown when chat is empty) -->
+            <div class="welcome-card" id="welcomeScreen">
+              <div class="welcome-hero-icon">
+                <i class="fa-solid fa-microscope"></i>
+              </div>
+
+              <h2>Welcome to <span class="gradient-text">ResearchMind AI</span></h2>
+              <p class="welcome-lead">
+                Your intelligent RAG research companion. Upload academic papers, technical documentation, or books to analyze, summarize, and extract instant insights.
+              </p>
+
+              <!-- Quick Features Grid -->
+              <div class="feature-grid">
+                <div class="feature-box">
+                  <div class="fbox-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+                  <h4>PDF Vector Indexing</h4>
+                  <p>Smart text chunking & ChromaDB embeddings for instant retrieval.</p>
+                </div>
+                <div class="feature-box">
+                  <div class="fbox-icon"><i class="fa-solid fa-brain"></i></div>
+                  <h4>RAG Context Q&A</h4>
+                  <p>Answers grounded directly in your uploaded reference materials.</p>
+                </div>
+                <div class="feature-box">
+                  <div class="fbox-icon"><i class="fa-solid fa-quote-right"></i></div>
+                  <h4>Source Citations</h4>
+                  <p>Transparent citation traces for verifying fact origins.</p>
+                </div>
+                <div class="feature-box">
+                  <div class="fbox-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                  <h4>Instant Summaries</h4>
+                  <p>Generate key findings & executive summaries in seconds.</p>
+                </div>
+              </div>
+
+              <!-- Suggested Questions / Prompts -->
+              <div class="suggestions-section">
+                <span class="section-tag"><i class="fa-solid fa-lightbulb"></i> Suggested Prompts</span>
+                <div class="suggestions-grid">
+                  <button class="suggestion-chip">
+                    <i class="fa-solid fa-align-left"></i>
+                    <span>Summarize the methodology of the active paper</span>
+                  </button>
+                  <button class="suggestion-chip">
+                    <i class="fa-solid fa-key"></i>
+                    <span>What are the key findings and conclusions?</span>
+                  </button>
+                  <button class="suggestion-chip">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Extract primary research questions answered</span>
+                  </button>
+                  <button class="suggestion-chip">
+                    <i class="fa-solid fa-note-sticky"></i>
+                    <span>Generate bullet-point study revision notes</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Typing Bouncing Indicator -->
+          <div class="typing-indicator hidden" id="typingIndicator">
+            <div class="typing-avatar">
+              <i class="fa-solid fa-microscope"></i>
+            </div>
+            <div class="typing-bubble">
+              <div class="dot"></div>
+              <div class="dot"></div>
+              <div class="dot"></div>
+              <span class="typing-text">ResearchMind is searching documents & generating response...</span>
+            </div>
+          </div>
+
+          <!-- Chat Input Bar with Prominent Target PDF Selector Toolbar -->
+          <div class="chat-input-bar">
+            <!-- Target PDF Selector Toolbar -->
+            <div class="target-pdf-toolbar">
+              <div class="target-pdf-selector">
+                <i class="fa-solid fa-bullseye text-primary"></i>
+                <label for="targetPdfSelect">Target PDF Context:</label>
+                <select id="targetPdfSelect" class="target-pdf-dropdown">
+                  <option value="">🌐 All Uploaded Documents (Full Library Context)</option>
+                </select>
+              </div>
+              <span class="target-status-badge" id="targetStatusBadge">Querying All Library PDFs</span>
+            </div>
+
+            <div class="input-container">
+              <button id="uploadButton" class="btn-attach" title="Attach PDF Document">
+                <i class="fa-solid fa-paperclip"></i>
+              </button>
+
+              <button id="micButton" class="btn-mic" title="Voice Input Dictation">
+                <i class="fa-solid fa-microphone"></i>
+              </button>
+
+              <textarea id="messageInput" rows="1" placeholder="Ask ResearchMind AI anything about your uploaded documents..."></textarea>
+
+              <button id="sendButton" class="btn-send" title="Send Message">
+                <i class="fa-solid fa-paper-plane"></i>
+              </button>
+            </div>
+
+            <div class="input-info-footer">
+              <span><i class="fa-solid fa-shield-halved"></i> Powered by Local RAG & Ollama. Your documents remain private.</span>
+            </div>
+
+            <!-- Hidden File Input -->
+            <input type="file" id="fileInput" accept=".pdf" hidden multiple>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================
+           VIEW 2: Research Library Panel
+      ==================================================== -->
+      <section class="view-panel" id="view-documents">
+        <div class="library-container">
+          <div class="library-toolbar">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="docSearchInput" placeholder="Filter documents by name...">
+            </div>
+
+            <div class="toolbar-actions">
+              <button class="btn-secondary" id="refreshDocuments">
+                <i class="fa-solid fa-rotate"></i> Refresh
+              </button>
+              <button class="btn-primary" id="addDocumentButton">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Upload PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- Inline Upload Progress Indicator -->
+          <div id="uploadProgress" class="upload-progress-card hidden">
+            <div class="progress-meta">
+              <span id="progressText" class="progress-title">Uploading & vectorizing paper...</span>
+              <span id="progressPercent" class="progress-val">0%</span>
+            </div>
+            <div class="progress-bar-track">
+              <div id="progressFill" class="progress-bar-fill"></div>
+            </div>
+          </div>
+
+          <!-- Document List Grid -->
+          <div id="documentsList" class="documents-grid">
+            <div class="empty-docs-state">
+              <i class="fa-solid fa-folder-open"></i>
+              <h3>Your Research Library is Empty</h3>
+              <p>Upload PDFs to build your document vector store and start asking questions.</p>
+              <button id="uploadFirstDocument" class="btn-primary">
+                <i class="fa-solid fa-upload"></i> Upload First Document
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================
+           VIEW 3: Insights & Analytics View
+      ==================================================== -->
+      <section class="view-panel" id="view-analytics">
+        <div class="analytics-container">
+          <h2><i class="fa-solid fa-chart-pie"></i> System Insights & Vector Metrics</h2>
+          <p class="lead-text">Real-time statistics on your uploaded research library and database embeddings.</p>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon cyan"><i class="fa-solid fa-file-pdf"></i></div>
+              <div class="stat-content">
+                <span class="stat-val" id="statTotalDocs">0</span>
+                <span class="stat-label">Total Documents</span>
+              </div>
+            </div>
+
+            <div class="stat-card indigo"><div class="stat-icon indigo"><i class="fa-solid fa-file-lines"></i></div>
+              <div class="stat-content">
+                <span class="stat-val" id="statTotalPages">0</span>
+                <span class="stat-label">Indexed Pages</span>
+              </div>
+            </div>
+
+            <div class="stat-card teal">
+              <div class="stat-icon teal"><i class="fa-solid fa-layer-group"></i></div>
+              <div class="stat-content">
+                <span class="stat-val" id="statTotalChunks">0</span>
+                <span class="stat-label">Vector Chunks</span>
+              </div>
+            </div>
+
+            <div class="stat-card purple">
+              <div class="stat-icon purple"><i class="fa-solid fa-hard-drive"></i></div>
+              <div class="stat-content">
+                <span class="stat-val" id="statTotalSize">0 MB</span>
+                <span class="stat-label">Storage Consumed</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Document Insights & Key Findings Container -->
+          <div class="insights-box mt-6">
+            <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Document Insights & Summary Hub</h3>
+            <p>Select a document from your library to view automatically generated summaries and key findings.</p>
+            <div id="insightsContent" class="insights-body">
+              <div class="empty-insights">
+                <i class="fa-solid fa-book-bookmark"></i>
+                <p>No document selected for insight view. Upload or click a paper in the library to inspect its summary.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- =====================================================
+         Slide-over Documents Panel
+    ====================================================== -->
+    <aside class="documents-drawer" id="documentsPanel">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <i class="fa-solid fa-books"></i>
+          <h3>Quick Library</h3>
+        </div>
+        <button id="closeDocumentsPanel" class="icon-btn">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+        <p class="drawer-sub">Select a document to filter your AI chat context.</p>
+        <div id="drawerDocsList" class="drawer-docs-list"></div>
+      </div>
+
+      <div class="drawer-footer">
+        <button id="drawerUploadBtn" class="btn-primary w-full">
+          <i class="fa-solid fa-upload"></i> Upload PDF
+        </button>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ==========================================================
+       MODAL 1: Upload Document Modal
+  =========================================================== -->
+  <div id="uploadModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-cloud-arrow-up text-primary"></i>
+          <h3>Upload Research Document</h3>
+        </div>
+        <button id="closeUploadModal" class="btn-modal-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div id="dropZone" class="drop-zone-area">
+          <div class="drop-icon">
+            <i class="fa-solid fa-file-pdf"></i>
+          </div>
+          <h4>Drag & Drop your PDF file here</h4>
+          <p>or click below to browse from your computer</p>
+
+          <button id="browseFiles" class="btn-secondary mt-3">
+            <i class="fa-solid fa-folder-open"></i> Browse Files
+          </button>
+          <span class="file-note">Supported format: PDF (up to 50MB)</span>
+        </div>
+
+        <div id="modalUploadProgress" class="upload-progress-card hidden mt-4">
+          <div class="progress-meta">
+            <span id="modalProgressText" class="progress-title">Parsing document & computing embeddings...</span>
+            <span id="modalProgressPercent" class="progress-val">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div id="modalProgressFill" class="progress-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       MODAL 2: ChatGPT-Style Authentication Modal
+  =========================================================== -->
+  <div id="authModal" class="modal-backdrop hidden">
+    <div class="modal-card modal-auth">
+      <div class="modal-header border-none pb-0">
+        <button id="closeAuthModal" class="btn-modal-close" title="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <div class="auth-title-box">
+          <div class="auth-brand-badge">
+            <i class="fa-solid fa-microscope"></i>
+          </div>
+          <h3>Welcome to ResearchMind AI</h3>
+          <p>Log in or create an account to start researching</p>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <!-- Inline Auth Alert Box -->
+        <div id="authAlertBox" class="auth-alert-box hidden">
+          <i class="fa-solid fa-triangle-exclamation text-danger"></i>
+          <span id="authAlertText">User is not registered. Please create an account first.</span>
+        </div>
+
+        <!-- Auth Tabs Switcher -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tabLoginBtn">Sign In</button>
+          <button class="auth-tab" id="tabRegisterBtn">Create Account</button>
+        </div>
+
+        <!-- 1-Click Demo Guest Login -->
+        <button id="btnGuestLogin" class="btn-guest-login">
+          <i class="fa-solid fa-bolt text-warning"></i>
+          <span>1-Click Demo / Guest Sign In</span>
+        </button>
+
+        <div class="auth-divider">
+          <span>Or continue with credentials</span>
+        </div>
+
+        <!-- Form: Sign In -->
+        <form id="loginForm" class="auth-form">
+          <div class="form-group">
+            <label><i class="fa-solid fa-envelope text-primary"></i> Email or Username</label>
+            <input type="text" id="loginEmail" class="auth-input" placeholder="Enter email or username" required autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-lock text-primary"></i> Password</label>
+            <input type="password" id="loginPassword" class="auth-input" placeholder="Enter password" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn-primary btn-auth-submit">
+            <i class="fa-solid fa-right-to-bracket"></i> Sign In to Studio
+          </button>
+        </form>
+
+        <!-- Form: Register / Create Account -->
+        <form id="registerForm" class="auth-form hidden">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user text-primary"></i> Full Name</label>
+            <input type="text" id="regName" class="auth-input" placeholder="Enter full name" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-envelope text-primary"></i> Email Address</label>
+            <input type="email" id="regEmail" class="auth-input" placeholder="Enter email address" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-lock text-primary"></i> Create Password</label>
+            <input type="password" id="regPassword" class="auth-input" placeholder="Create password" required autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn-primary btn-auth-submit">
+            <i class="fa-solid fa-user-plus"></i> Create Pro Account
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       MODAL 3: Export Chat Options Modal (PDF, TXT, MD)
+  =========================================================== -->
+  <div id="exportModal" class="modal-backdrop hidden">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div class="modal-title text-primary">
+          <i class="fa-solid fa-file-export"></i>
+          <h3>Export Conversation</h3>
+        </div>
+        <button id="closeExportModal" class="btn-modal-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <p class="export-intro-text">Select your preferred export format for this chat session:</p>
+
+        <div class="export-options-grid">
+          <button id="exportPdfBtn" class="export-option-card">
+            <div class="export-icon red"><i class="fa-solid fa-file-pdf"></i></div>
+            <div class="export-info">
+              <h4>PDF Document (.pdf)</h4>
+              <span>Formatted document layout ready to save or print</span>
+            </div>
+          </button>
+
+          <button id="exportTxtBtn" class="export-option-card">
+            <div class="export-icon blue"><i class="fa-solid fa-file-lines"></i></div>
+            <div class="export-info">
+              <h4>Plain Text (.txt)</h4>
+              <span>Simple text document for notes & word processors</span>
+            </div>
+          </button>
+
+          <button id="exportMdBtn" class="export-option-card">
+            <div class="export-icon purple"><i class="fa-solid fa-file-code"></i></div>
+            <div class="export-info">
+              <h4>Markdown File (.md)</h4>
+              <span>Markdown with headers, code blocks & citations</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       MODAL 4: Document Details & Key Insights Modal
+  =========================================================== -->
+  <div id="docDetailsModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title text-primary">
+          <i class="fa-solid fa-file-pdf"></i>
+          <h3 id="detailsModalTitle">Document Details</h3>
+        </div>
+        <button id="closeDetailsModal" class="btn-modal-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body" id="detailsModalBody">
+        <div class="spinner-box py-4">
+          <div class="pulse-spinner"></div>
+          <span class="loading-text">Loading document details...</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="detailsFocusBtn" class="btn-primary">
+          <i class="fa-solid fa-bullseye"></i> Focus Chat on This Paper
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       MODAL 5: Settings / Preferences Modal
+  =========================================================== -->
+  <div id="settingsModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i class="fa-solid fa-sliders text-primary"></i>
+          <h3>Preferences & System Health</h3>
+        </div>
+        <button id="closeSettingsModal" class="btn-modal-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <label>Interface Theme</label>
+            <span>Choose between Cyber Midnight Dark and Light Glass.</span>
+          </div>
+          <button id="themeSwitch" class="btn-secondary">
+            <i class="fa-solid fa-moon"></i> Toggle Theme
+          </button>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label>Backend Endpoint</label>
+            <span>Current API URL server configuration</span>
+          </div>
+          <span id="settingsApiUrl" class="code-badge">http://127.0.0.1:8000</span>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label>Backend Status</label>
+            <span>Real-time health connection test</span>
+          </div>
+          <span id="settingsBackendStatus" class="status-pill">Checking...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================
+       MODAL 6: Delete Confirmation Modal
+  =========================================================== -->
+  <div id="deleteModal" class="modal-backdrop hidden">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div class="modal-title text-danger">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <h3>Delete Document</h3>
+        </div>
+        <button id="closeDeleteModal" class="btn-modal-close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-body text-center">
+        <p>Are you sure you want to delete this document from your library? Vector embeddings will be permanently removed.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button id="cancelDelete" class="btn-secondary">Cancel</button>
+        <button id="confirmDelete" class="btn-danger">
+          <i class="fa-solid fa-trash-can"></i> Delete Permanently
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>
