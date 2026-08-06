@@ -910,12 +910,12 @@ function renderDrawerDocsList(docs = []) {
 }
 
 function selectActiveDocument(doc) {
-  if (App.state.activeDocumentId === doc.id) {
+  if (App.state.activeDocumentId === doc.id || App.state.activeDocumentName === doc.filename || App.state.activeDocumentId === doc.filename) {
     App.state.activeDocumentId = null;
     App.state.activeDocumentName = null;
     showToast("Chat context reset to all documents", "info", 2000);
   } else {
-    App.state.activeDocumentId = doc.id;
+    App.state.activeDocumentId = doc.filename || doc.id;
     App.state.activeDocumentName = doc.filename;
     showToast(`Chat focused on "${doc.filename}"`, "success", 2000);
   }
@@ -1559,17 +1559,23 @@ function registerEvents() {
   // Target PDF Selector Dropdown
   if (el.targetPdfSelect) {
     el.targetPdfSelect.addEventListener("change", (e) => {
-      const selectedId = e.target.value;
-      if (!selectedId) {
+      const val = e.target.value;
+      if (!val) {
         App.state.activeDocumentId = null;
         App.state.activeDocumentName = null;
         showToast("Chat context reset to all documents", "info", 1500);
       } else {
-        const doc = App.state.documents.find((d) => String(d.id) === String(selectedId));
+        const doc = App.state.documents.find(
+          (d) => String(d.id) === String(val) || String(d.filename) === String(val)
+        );
         if (doc) {
-          App.state.activeDocumentId = doc.id;
+          App.state.activeDocumentId = doc.filename || doc.id;
           App.state.activeDocumentName = doc.filename;
           showToast(`Targeted chat on "${doc.filename}"`, "success", 1500);
+        } else {
+          App.state.activeDocumentId = val;
+          App.state.activeDocumentName = val;
+          showToast(`Targeted chat on "${val}"`, "success", 1500);
         }
       }
       updateActiveDocBanner();
