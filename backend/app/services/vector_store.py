@@ -80,19 +80,41 @@ def search(
     document_id: str = None
 ):
     """
-    Search similar chunks. If document_id is given, only
-    search chunks belonging to that document.
+    Search similar chunks. If document_id is given, search by filename or document_id.
+    If specific document query yields 0 results, fall back to searching all documents.
     """
-
-    query_args = {
-        "query_embeddings": [query_embedding],
-        "n_results": top_k
-    }
-
     if document_id:
-        query_args["where"] = {"document_id": document_id}
+        doc_str = str(document_id).strip()
+        if doc_str:
+            # 1. Try matching filename in metadata
+            try:
+                res_fn = collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=top_k,
+                    where={"filename": doc_str}
+                )
+                if res_fn.get("documents", [[]])[0]:
+                    return res_fn
+            except Exception:
+                pass
 
-    return collection.query(**query_args)
+            # 2. Try matching document_id in metadata
+            try:
+                res_id = collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=top_k,
+                    where={"document_id": doc_str}
+                )
+                if res_id.get("documents", [[]])[0]:
+                    return res_id
+            except Exception:
+                pass
+
+    # 3. Fallback: Search across all stored document chunks
+    return collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k
+    )
 
 
 # ======================================================

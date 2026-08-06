@@ -949,8 +949,9 @@ function populateTargetPdfDropdown() {
 
   let optionsHTML = `<option value="">🌐 All Uploaded Documents (${docs.length} PDFs Context)</option>`;
   docs.forEach((doc) => {
-    const selectedAttr = String(doc.id) === currentId ? "selected" : "";
-    optionsHTML += `<option value="${doc.id}" ${selectedAttr}>📄 ${escapeHTML(doc.filename)}</option>`;
+    const docKey = doc.filename || doc.id;
+    const selectedAttr = (String(doc.id) === currentId || String(doc.filename) === currentId) ? "selected" : "";
+    optionsHTML += `<option value="${escapeHTML(docKey)}" ${selectedAttr}>📄 ${escapeHTML(doc.filename)}</option>`;
   });
 
   select.innerHTML = optionsHTML;
