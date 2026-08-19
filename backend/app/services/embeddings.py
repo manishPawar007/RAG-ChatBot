@@ -1,115 +1,152 @@
 """
-ResearchMind AI
+DocuMind AI
 -----------
 Embedding Service
-Generates vector embeddings using SentenceTransformers (all-MiniLM-L6-v2) with lightweight fallback.
+Generates vector embeddings using SentenceTransformers.
 """
 
-import math
-import hashlib
 from typing import List
 
+from sentence_transformers import SentenceTransformer
+
+# ======================================================
+# Model Configuration
+# ======================================================
+
 MODEL_NAME = "all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384
 
-_model = None
-_model_failed = False
+_model: SentenceTransformer | None = None
 
 
-def load_model():
+# ======================================================
+# Load Model
+# ======================================================
+
+def load_model() -> SentenceTransformer:
     """
-    Load embedding model lazily inside try-except block.
+    Load embedding model only once.
     """
-    global _model, _model_failed
 
-    if _model_failed:
-        return None
+    global _model
 
     if _model is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-            print("=" * 60)
-            print(f"Loading embedding model: {MODEL_NAME}")
-            _model = SentenceTransformer(MODEL_NAME)
-            print("Embedding model loaded successfully.")
-            print("=" * 60)
-        except Exception as e:
-            print(f"SentenceTransformers load fallback ({e}). Using hash vectorizer.")
-            _model_failed = True
-            _model = None
+        print("=" * 60)
+        print(f"Loading embedding model: {MODEL_NAME}")
+        _model = SentenceTransformer(MODEL_NAME)
+        print("Embedding model loaded successfully.")
+        print("=" * 60)
 
     return _model
 
 
-def _lightweight_hash_embedding(text: str, dim: int = EMBEDDING_DIM) -> List[float]:
-    """
-    Generate deterministic 384-dim normalized vector using word n-gram hashing.
-    """
-    words = text.lower().split()
-    vector = [0.0] * dim
-    if not words:
-        return vector
-
-    for i, word in enumerate(words):
-        h1 = int(hashlib.md5(word.encode("utf-8")).hexdigest(), 16) % dim
-        vector[h1] += 1.0
-        if i < len(words) - 1:
-            bigram = f"{word}_{words[i+1]}"
-            h2 = int(hashlib.md5(bigram.encode("utf-8")).hexdigest(), 16) % dim
-            vector[h2] += 1.5
-
-    norm = math.sqrt(sum(x * x for x in vector))
-    if norm > 0:
-        vector = [x / norm for x in vector]
-
-    return vector
-
+# ======================================================
+# Generate Single Embedding
+# ======================================================
 
 def generate_embedding(text: str) -> List[float]:
     """
     Generate embedding for one text.
     """
+
     model = load_model()
-    if model is not None:
-        try:
-            embedding = model.encode(
-                text,
-                convert_to_numpy=True,
-                normalize_embeddings=True
-            )
-            return embedding.tolist()
-        except Exception as e:
-            print(f"Model encode error: {e}")
 
-    return _lightweight_hash_embedding(text)
+    embedding = model.encode(
+        text,
+        convert_to_numpy=True,
+        normalize_embeddings=True
+    )
 
+    return embedding.tolist()
+
+
+# ======================================================
+# Generate Batch Embeddings
+# ======================================================
 
 def generate_embeddings(texts: List[str]) -> List[List[float]]:
     """
     Generate embeddings for multiple texts.
     """
+
     if not texts:
         return []
 
     model = load_model()
-    if model is not None:
-        try:
-            embeddings = model.encode(
-                texts,
-                batch_size=32,
-                show_progress_bar=False,
-                convert_to_numpy=True,
-                normalize_embeddings=True
-            )
-            return embeddings.tolist()
-        except Exception as e:
-            print(f"Batch model encode error: {e}")
 
-    return [_lightweight_hash_embedding(t) for t in texts]
+    embeddings = model.encode(
+        texts,
+        batch_size=32,
+        show_progress_bar=False,
+        convert_to_numpy=True,
+        normalize_embeddings=True
+    )
 
+    return embeddings.tolist()
+
+
+# ======================================================
+# Query Embedding
+# ======================================================
 
 def generate_query_embedding(query: str) -> List[float]:
     """
-    Generate query embedding.
+    Generate embedding for user query.
     """
+
     return generate_embedding(query)
+
+
+# ======================================================
+# Cosine Similarity
+# ======================================================
+
+def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+    """
+    Compute cosine similarity between two vectors.
+    """
+
+    import numpy as np
+
+    a = np.array(vec1)
+    b = np.array(vec2)
+
+    denom = (np.linalg.norm(a) * np.linalg.norm(b))
+
+    if denom == 0:
+        return 0.0
+
+    return float(np.dot(a, b) / denom)
+
+
+# ======================================================
+# Embedding Dimension
+# ======================================================
+
+def embedding_dimension() -> int:
+    """
+    Return embedding size.
+    """
+
+    model = load_model()
+
+    return model.get_sentence_embedding_dimension()
+
+
+# ======================================================
+# Health Check
+# ======================================================
+
+def embedding_health() -> dict:
+    """
+    Verify model is operational.
+    """
+
+    model = load_model()
+
+    vector = model.encode("DocuMind AI")
+
+    return {
+        "status": "healthy",
+        "model": MODEL_NAME,
+        "dimension": len(vector)
+    }
